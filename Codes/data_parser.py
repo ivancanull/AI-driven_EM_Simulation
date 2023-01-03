@@ -4,6 +4,8 @@
 import os
 import re
 import pandas as pd
+import numpy as np
+
 
 # from tqdm import tqdm
 
@@ -86,6 +88,15 @@ def data_parse():
                 elif node_ID_match:
                     node_ID = node_ID_match.group(1)
         
+    return df
+
+def calculate_amp_phase(df):
+    # Calculate amplitude and phase
+    for i in 1, 2, 3, 4:
+        for j in 1, 2, 3, 4:
+            idx = '('+str(i)+','+str(j)+')'
+            df['A'+idx] = np.sqrt(df['SR'+idx] ** 2 + df['SI'+idx] ** 2)
+            df['P'+idx] = np.arctan2(df['SI'+idx] , df['SR'+idx])
     return df
 
 def main():

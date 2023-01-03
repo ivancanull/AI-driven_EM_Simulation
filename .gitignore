@@ -129,9 +129,12 @@ dmypy.json
 .pyre/
 
 # Data
-Tml_sweep/
+Data/Tml_sweep/
+Data/Tml_sweep.7z
 
 # Figures
-Figures/*
+Figures/pdf/*
+Figures/png/*
 
 # Models
+Models/*
