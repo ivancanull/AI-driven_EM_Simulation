@@ -90,13 +90,18 @@ def data_parse():
         
     return df
 
-def calculate_amp_phase(df):
+def calculate_amp_phase(df, unwrap=True):
     # Calculate amplitude and phase
     for i in 1, 2, 3, 4:
         for j in 1, 2, 3, 4:
             idx = '('+str(i)+','+str(j)+')'
             df['A'+idx] = np.sqrt(df['SR'+idx] ** 2 + df['SI'+idx] ** 2)
             df['P'+idx] = np.arctan2(df['SI'+idx] , df['SR'+idx])
+            if unwrap:
+                index_list = list(dict.fromkeys(df.index.get_level_values(0)))
+                for k in index_list:
+                    df.loc[k]['P'+idx] = np.unwrap(df.loc[k]['P'+idx])
+                    
     return df
 
 def main():
