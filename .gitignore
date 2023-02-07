@@ -133,8 +133,8 @@ Data/Tml_sweep/
 Data/Tml_sweep.7z
 
 # Figures
-Figures/pdf/*
-Figures/png/*
+*.pdf
+*.png
 
 # Models
-Models/*
+*.pt
