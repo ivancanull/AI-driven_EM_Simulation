@@ -37,19 +37,26 @@ def plot_X_y(X, y, pred=None, epoch=None, loss=None, r2=None, mer=None):
     plt.show();
    
 class MLP(nn.Module):
-    def __init__(self, in_features, out_features):
+    def __init__(self, in_features, out_features, dropout_rate=0.0):
         super(MLP, self).__init__()
-        self.fc1 = nn.Linear(in_features, 500)
-        self.fc2 = nn.Linear(500, 500)
-        self.fc3 = nn.Linear(500, 500)
-        self.fc4 = nn.Linear(500, out_features)
-        
+
+        self.layers = nn.Sequential(
+            nn.Linear(in_features, 500),
+            nn.Dropout(p=dropout_rate),
+            nn.ReLU(),
+            nn.Linear(500, 500),
+            nn.Dropout(p=dropout_rate),
+            nn.ReLU(),
+            nn.Linear(500, 500),
+            nn.Dropout(p=dropout_rate),
+            nn.ReLU(),
+            nn.Linear(500, out_features)
+        )
+
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
+
+        return self.layers(x)
+
 
 def initialize_weights(self):
     for m in self.modules():
@@ -91,7 +98,7 @@ class data_processor():
     
 class Model():
     
-    def __init__(self, df, indices, input_cols, output_col, in_features, out_features, device):
+    def __init__(self, df, indices, input_cols, output_col, in_features, out_features, device, dropout_rate=0.0, postfix=''):
         
         train_idx = indices['train_idx']
         val_idx = indices['val_idx']
@@ -133,11 +140,11 @@ class Model():
         
         # Define the model
         self.in_features, self.out_features = in_features, out_features
-        self.model = MLP(in_features, out_features).to(device)
+        self.model = MLP(in_features, out_features, dropout_rate).to(device)
         initialize_weights(self.model)
         
         # Define saved filepath
-        self.path = '../Models/' + output_col + '_best_model.pt'
+        self.path = '../Models/' + output_col + '_' + postfix + '_best_model.pt'
     
     def get_dp(self):
         return self.dp
@@ -151,21 +158,23 @@ class Model():
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss,
+                    'dp': self.dp,
                     }, self.path)
     
     def load_model(self, learning_rate=0.01):
         
         model = MLP(self.in_features, self.out_features).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        criterion = nn.L1Loss()
+        criterion = nn.MSELoss()
         
         checkpoint = torch.load(self.path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         loss = checkpoint['loss']
+        dp = checkpoint['dp']
         
-        return epoch, model, optimizer, loss
+        return epoch, model, optimizer, loss, dp
         
     def train(self, learning_rate, num_epochs):
         
@@ -223,8 +232,8 @@ class Model():
     
     def test(self):
         
-        _, model, _, _ = self.load_model()
-        criterion = nn.L1Loss()
+        _, model, _, _, _ = self.load_model()
+        criterion = nn.MSELoss()
         
         with torch.no_grad():
 
@@ -247,4 +256,38 @@ class Model():
             plot_X_y(self.F.cpu(), self.y_test.cpu()[0,:], predictions.cpu()[0,:], 0, test_loss, r2, mer)
 
         return predictions
+    
+    def predict(self, X, y=None, plot=False):
+
+        _, model, _, _, dp = self.load_model()
+        criterion = nn.MSELoss()
+        X_norm, _ = dp.normalize(X=X)
+
+        with torch.no_grad():
+
+            # Make predictions on the test data
+            predictions = model(X_norm)
+            _, predictions = self.dp.denormalize(y=predictions)
+
+            if y is not None:
+                # Calculate the loss function
+                loss = criterion(predictions, y)
+
+                # Track the loss value 
+                loss = loss.item()  
+
+                # Compute the R^2 score
+                r2 = r2_score(predictions.detach().cpu().numpy(), y.detach().cpu().numpy())
+
+                # Compute the max error rate
+                mer = torch.nan_to_num(torch.max(torch.abs(predictions - y) / y))
+
+                if plot == True:
+                    plot_X_y(self.F.cpu(), y.cpu()[0,:], predictions.cpu()[0,:], 0, loss, r2, mer)
+        
+                return predictions, loss, r2, mer
+            else:
+                return predictions
+
+
 
