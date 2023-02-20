@@ -104,6 +104,15 @@ def calculate_amp_phase(df, unwrap=True):
                     
     return df
 
+def calculate_sin_cos(df):
+    for i in 1, 2, 3, 4:
+        for j in 1, 2, 3, 4:
+            idx = '('+str(i)+','+str(j)+')'
+            df['sinP'+idx] = np.sin(df['P'+idx])
+            df['cosP'+idx] = np.cos(df['P'+idx])
+            
+    return df
+
 def main():
     current_dir = os.getcwd()
     # Get the absolute path of the upper directory
