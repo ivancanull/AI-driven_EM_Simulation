@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import argparse
 import os
 import re
 import pandas as pd
@@ -11,12 +12,12 @@ import numpy as np
 
 ### PRASE THE DATA ###
 
-def data_parse():
-
+def data_parse(case, model, optimetric, data_dir='./'):
+    
     current_dir = os.getcwd()
     # Get the absolute path of the upper directory
     home_dir = os.path.abspath(os.path.join(current_dir, '..'))
-    data_dir = os.path.join('Data', 'Tml_sweep', 'Tml_sweep', 'case1', 'Differential_Stripline', 'Optimetrics', 'SweepSetup1')
+    data_dir = os.path.join(data_dir, 'Data', 'Tml_sweep', 'Tml_sweep', case, model, 'Optimetrics', optimetric)
 
     data_path = os.path.join(home_dir, data_dir)
 
@@ -36,7 +37,6 @@ def data_parse():
             # read rlgc
             rlgc = dirs + '.rlgc'
             new_varnew_var = rlgc_df_list.append(pd.read_csv(os.path.join(data_path, dirs, rlgc), skiprows=2, delim_whitespace=True))
-            
 
             # read s4p
             s4p = dirs + '.s4p'
@@ -46,7 +46,7 @@ def data_parse():
 
     df = pd.concat([pd.concat(rlgc_df_list, keys=keys), pd.concat(s4p_df_list, keys=keys)], axis=1)
 
-    vsf_file = os.path.join('Data', 'Tml_sweep', 'Tml_sweep', 'case1', 'Differential_Stripline', 'Differential_Stripline.vsf')
+    vsf_file = os.path.join('Data', 'Tml_sweep', 'Tml_sweep', case, model, model+'.vsf')
 
     # open the file 
     with open(os.path.join(home_dir, vsf_file), "r") as file:
@@ -75,7 +75,7 @@ def data_parse():
                 
             if parse_en:
                 # read the parameters
-                parameter_pattern = r".VARCOMBINATION \"Differential_Stripline.([a-zA-Z]+)\"\|\"([\d.]+)\""
+                parameter_pattern = r".VARCOMBINATION \"%s.([a-zA-Z]+)\"\|\"([\d.]+)\""%('Differential_Stripline')
                 node_ID_pattern = r".SIGNATURE \"(\w+)\""
                 
                 # using re.search() to search for the first patterns
@@ -113,12 +113,34 @@ def calculate_sin_cos(df):
             
     return df
 
-def main():
+
+def parse_args():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--case', type=str, default='case1', help='project case name')
+    parser.add_argument('--model', type=str, default='Differential_Stripline', help='line model for EM simulation')
+    parser.add_argument('--optimetric', type=str, default='SweepSetup1', help='optimetric sweep name')
+    parser.add_argument('--dir', type=str, default='./', help='data storage directory')
+    
+    return parser.parse_args()
+    
+def main(args):
+    
+    case = args.case
+    EM_model = args.model
+    optimetric = args.optimetric
+    
+    dataname = '%s_%s_%s' %(case, EM_model, optimetric)
+    data_dir = os.path.abspath(args.dir)
+    
+    df = calculate_amp_phase(data_parse(case, EM_model, optimetric, data_dir), unwrap=True)
     current_dir = os.getcwd()
+    
     # Get the absolute path of the upper directory
-    data_dir = os.path.abspath(os.path.join(current_dir, '..', 'Data', 'df.csv'))
-    df = data_parse()
-    df.to_csv(data_dir)
+    saved_dir = os.path.abspath(os.path.join(data_dir, 'Data', '%s.csv' % dataname))
+    df.to_csv(saved_dir)
 
 if __name__ == "__main__":
-    main()
+    
+    args = parse_args()
+    main(args)
