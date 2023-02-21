@@ -40,7 +40,7 @@ def plot_X_y(X, y, pred=None, epoch=None, loss=None, r2=None, mer=None):
 def initialize_weights(self):
     for m in self.modules():
         if isinstance(m, nn.Linear):
-            torch.nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
+            torch.nn.init.xavier_normal_(m.weight.data)
             if m.bias is not None:
                 torch.nn.init.zeros_(m.bias.data)
 
@@ -169,9 +169,12 @@ class Model():
         criterion = nn.MSELoss()
         
         best_loss = 100.0
-
+        
+        
         for epoch in range(num_epochs):
-
+            
+            self.model.train()
+            
             # Clear the gradients
             optimizer.zero_grad()
 
@@ -189,7 +192,10 @@ class Model():
 
             # Validation
             if epoch % 100 == 99: 
+                
                 with torch.no_grad():
+                    
+                    self.model.eval()
 
                     predictions = self.model(self.X_val_norm)
 
@@ -209,9 +215,9 @@ class Model():
                     mer = torch.nan_to_num(torch.max(torch.abs(predictions - self.y_val) / self.y_val))
 
 
-                    # Plot training results
-                    i = random.randint(0, self.y_train.shape[0]-1)
-                    live_plot_X_y(self.F.cpu(), self.y_train.cpu()[i,:], outputs.cpu()[i,:], epoch + 1, test_loss, r2, mer)
+                    # Plot validating results
+                    i = random.randint(0, self.y_val.shape[0]-1)
+                    live_plot_X_y(self.F.cpu(), self.y_val.cpu()[i,:], predictions.cpu()[i,:], epoch + 1, test_loss, r2, mer)
         
         
         
@@ -223,6 +229,8 @@ class Model():
         criterion = nn.MSELoss()
         
         with torch.no_grad():
+            
+            model.eval()
 
             # Make predictions on the test data
             predictions = model(self.X_test_norm)
@@ -251,6 +259,8 @@ class Model():
         X_norm, _ = dp.normalize(X=X)
 
         with torch.no_grad():
+            
+            model.eval()
 
             # Make predictions on the test data
             predictions = model(X_norm)

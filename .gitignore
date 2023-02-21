@@ -135,8 +135,11 @@ Data/Tml_sweep.*
 # Figures
 *.pdf
 *.png
+!/Figures/pdf/SoTA_model/*
+!/Figures/png/SoTA_model/*
 
 # Models
 *.pt
+!/Models/SoTA_model/*.pt
 
 .vscode/launch.json
