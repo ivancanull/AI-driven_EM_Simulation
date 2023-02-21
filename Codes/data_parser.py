@@ -12,7 +12,7 @@ import numpy as np
 
 ### PRASE THE DATA ###
 
-def data_parse(case, model, optimetric, data_dir='./'):
+def data_parse(case, model, port, optimetric, data_dir='./'):
     
     current_dir = os.getcwd()
     # Get the absolute path of the upper directory
@@ -22,29 +22,34 @@ def data_parse(case, model, optimetric, data_dir='./'):
     data_path = os.path.join(home_dir, data_dir)
 
     rlgc_df_list = []
-    s4p_df_list = []
+    snp_df_list = []
     keys = []
-    s4p_headers = ["SR(1,1)", "SI(1,1)", "SR(1,2)", "SI(1,2)", "SR(1,3)", "SI(1,3)", "SR(1,4)", "SI(1,4)",
-                "SR(2,1)", "SI(2,1)", "SR(2,2)", "SI(2,2)", "SR(2,3)", "SI(2,3)", "SR(2,4)", "SI(2,4)",
-                "SR(3,1)", "SI(3,1)", "SR(3,2)", "SI(3,2)", "SR(3,3)", "SI(3,3)", "SR(3,4)", "SI(3,4)",
-                "SR(4,1)", "SI(4,1)", "SR(4,2)", "SI(4,2)", "SR(4,3)", "SI(4,3)", "SR(4,4)", "SI(4,4)"]
+    snp_headers = []
+    
+    for i in range(port):
+        for j in range(port):
+            for s in 'SR', 'SI':
+                snp_headers.append('%s(%d,%d)' % (s, i+1, j+1))
+
     for dirs in os.listdir(data_path):
         
         # skip with
         if os.path.isdir(os.path.join(data_path, dirs)):
             
-            keys.append(dirs)
             # read rlgc
             rlgc = dirs + '.rlgc'
-            new_varnew_var = rlgc_df_list.append(pd.read_csv(os.path.join(data_path, dirs, rlgc), skiprows=2, delim_whitespace=True))
+           
+            # read snp
+            snp = dirs + '.s%dp' % port
+            if os.path.exists(os.path.join(data_path, dirs, snp)) and os.path.exists(os.path.join(data_path, dirs, rlgc)):
+                keys.append(dirs)
+                rlgc_df_list.append(pd.read_csv(os.path.join(data_path, dirs, rlgc), skiprows=2, delim_whitespace=True))
 
-            # read s4p
-            s4p = dirs + '.s4p'
-            s4p_df = pd.read_csv(os.path.join(data_path, dirs, s4p), skiprows=7, delim_whitespace=True, header=None).loc[:, 1:]
-            s4p_df.columns = s4p_headers
-            s4p_df_list.append(s4p_df)
+                snp_df = pd.read_csv(os.path.join(data_path, dirs, snp), skiprows=port+3, delim_whitespace=True, header=None).loc[:, 1:]
+                snp_df.columns = snp_headers
+                snp_df_list.append(snp_df)
 
-    df = pd.concat([pd.concat(rlgc_df_list, keys=keys), pd.concat(s4p_df_list, keys=keys)], axis=1)
+    df = pd.concat([pd.concat(rlgc_df_list, keys=keys), pd.concat(snp_df_list, keys=keys)], axis=1)
 
     vsf_file = os.path.join('Data', 'Tml_sweep', 'Tml_sweep', case, model, model+'.vsf')
 
@@ -121,6 +126,7 @@ def parse_args():
     parser.add_argument('--model', type=str, default='Differential_Stripline', help='line model for EM simulation')
     parser.add_argument('--optimetric', type=str, default='SweepSetup1', help='optimetric sweep name')
     parser.add_argument('--dir', type=str, default='./', help='data storage directory')
+    parser.add_argument('--port', type=int, default=4, help='port number in the model')
     
     return parser.parse_args()
     
@@ -129,16 +135,17 @@ def main(args):
     case = args.case
     EM_model = args.model
     optimetric = args.optimetric
+    port = args.port
     
-    dataname = '%s_%s_%s' %(case, EM_model, optimetric)
+    dataname = '%s_%s_%d_ports_%s' %(case, EM_model, port, optimetric)
     data_dir = os.path.abspath(args.dir)
     
-    df = calculate_amp_phase(data_parse(case, EM_model, optimetric, data_dir), unwrap=True)
+    df = calculate_amp_phase(data_parse(case, EM_model, port, optimetric, data_dir), unwrap=True)
     current_dir = os.getcwd()
     
     # Get the absolute path of the upper directory
-    saved_dir = os.path.abspath(os.path.join(data_dir, 'Data', '%s.csv' % dataname))
-    df.to_csv(saved_dir)
+    saved_dir = os.path.abspath(os.path.join(data_dir, 'Data', '%s.pkl' % dataname))
+    df.to_pickle(saved_dir)  
 
 if __name__ == "__main__":
     

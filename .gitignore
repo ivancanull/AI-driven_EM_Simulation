@@ -130,7 +130,7 @@ dmypy.json
 
 # Data
 Data/Tml_sweep/
-Data/Tml_sweep.7z
+Data/Tml_sweep.*
 
 # Figures
 *.pdf
@@ -138,3 +138,5 @@ Data/Tml_sweep.7z
 
 # Models
 *.pt
+
+.vscode/launch.json
