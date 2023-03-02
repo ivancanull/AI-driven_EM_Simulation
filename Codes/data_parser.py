@@ -184,11 +184,16 @@ def data_parse_v3(dataset_dir, port, dataset_name):
         for j in range(port):
             for s in 'SR', 'SI':
                 snp_headers.append('%s(%d,%d)' % (s, i+1, j+1))
-
+                
     for subset in os.listdir(dataset_dir):
+        
+        filepath = os.path.join(dataset_dir, '%s_%s.zip' % (dataset_name, subset))
+        if os.path.exists(filepath):
+            continue
+        
         subset_dir = os.path.join(dataset_dir, subset)
-        excel_files = [f for f in os.listdir(os.path.join(dataset_dir, subset)) if f.endswith('.xlsx')]
-
+        excel_files = [f for f in os.listdir(subset_dir) if f.endswith('.xlsx')]
+        print(excel_files)
         # read para_df
         for excel_file in excel_files:
             df = pd.read_excel(os.path.join(dataset_dir, subset, excel_file), sheet_name='Mixed_N_Line_Stripline', skiprows=23)
@@ -218,9 +223,7 @@ def data_parse_v3(dataset_dir, port, dataset_name):
                     snp_df_list.append(snp_df)
 
         df = pd.concat(snp_df_list, keys=keys)
-        df.to_pickle(os.path.join(dataset_dir, '%s_%s.zip' % (dataset_name, subset)), compression='zip')
-        print(df.iloc[0: 10])
-
+        df.to_pickle(filepath, compression='zip')
 
     return
 
