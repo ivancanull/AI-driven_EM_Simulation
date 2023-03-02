@@ -173,21 +173,56 @@ Consider a dataset of the following structures:
 """
 
 
-def data_parse_v3(dataset, port,):
+def data_parse_v3(dataset_dir, port, dataset_name):
 
-    current_dir = os.getcwd()
-    home_dir = os.path.abspath(os.path.join(current_dir, '..'))
-    data_dir = os.path.join(home_dir, 'Data')
-    dataset_dir = os.path.join(data_dir, dataset)
+    keys = []
+    snp_headers = []
+    para_df_list = []
+    snp_df_list = []
+
+    for i in range(port):
+        for j in range(port):
+            for s in 'SR', 'SI':
+                snp_headers.append('%s(%d,%d)' % (s, i+1, j+1))
 
     for subset in os.listdir(dataset_dir):
+        subset_dir = os.path.join(dataset_dir, subset)
+        excel_files = [f for f in os.listdir(os.path.join(dataset_dir, subset)) if f.endswith('.xlsx')]
+
+        # read para_df
+        for excel_file in excel_files:
+            df = pd.read_excel(os.path.join(dataset_dir, subset, excel_file), sheet_name='Mixed_N_Line_Stripline', skiprows=23)
+            new_df = df.T.loc[df.T.index[1:]].copy()
+            new_df.columns = df.T.loc['batch list'].to_numpy()
+            new_df = new_df.set_index('save dir file name')
+            new_df.index.name = None
+            para_df_list.append(new_df)
         
+        para_df = pd.concat(para_df_list)
+
+        # read lines
+        for dir in os.listdir(subset_dir):
+            if os.path.isdir(os.path.join(subset_dir, dir, 'RLGC')):
+                snp = 'TransmissionLine.s%dp' % port
+                if os.path.exists(os.path.join(subset_dir, dir, 'RLGC', snp)):
+                    keys.append(dir)
+                    snp_df = pd.read_csv(os.path.join(subset_dir, dir, 'RLGC', snp), skiprows=port+3, delim_whitespace=True, header=None).loc[:, 1:]
+                    snp_df.columns = snp_headers
+
+                    for p in para_df.columns:
+                        if p == 'W':
+                            snp_df.loc[:, p] = float(para_df.loc[dir, p].split(',')[0])
+                        else:
+                            snp_df.loc[:, p] = float(para_df.loc[dir, p])
+                    
+                    snp_df_list.append(snp_df)
+
+        df = pd.concat(snp_df_list, keys=keys)
+        df.to_pickle(os.path.join(dataset_dir, '%s_%s.zip' % (dataset_name, subset)), compression='zip')
+        print(df.iloc[0: 10])
 
 
-    excel_dir = os.path.join(data_dir, '%s.xlsx' % case)
-    result_dir = os.path.join(data_dir, '%s' % case)
-    
-    para_df = pd.read_excel(excel_dir, sheet_name='Mixed_N_Line_Stripline', skiprows=23)
+    return
 
 
 def read_input_feature_xlsx(case, port):
@@ -264,9 +299,24 @@ def main(args):
     
     # Get the absolute path of the upper directory
     saved_dir = os.path.abspath(os.path.join(data_dir, 'Data', '%s.pkl' % dataname))
-    df.to_pickle(saved_dir)  
+    df.to_pickle(saved_dir) 
+
+def parse_data():
+    dataset_dir = '/media/cadlab/Dailow2/Tml_data/2-Line_WTL'
+    dataset_name = '2-Line_WTL'
+    df = data_parse_v3(dataset_dir, 4, dataset_name)
+
+def check_data():
+    dataset_dir = '/media/cadlab/Dailow2/Tml_data/2-Line_WTL'
+    dataset_name = '2-Line_WTL'
+    pickle_name = os.path.join(dataset_dir, '2-Line_WTL_2-Line-0WTL.zip')
+
+    df = pd.read_pickle(pickle_name)
+    df.iloc[0:1000].to_csv(os.path.join(dataset_dir, 'test.csv'), index_label=[0,1])
+    print(df.iloc[0:1000].index)
+
 
 if __name__ == "__main__":
     
-    args = parse_args()
-    main(args)
+    parse_data()
+
