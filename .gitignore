@@ -129,8 +129,9 @@ dmypy.json
 .pyre/
 
 # Data
-Data/Tml_sweep/
-Data/Tml_sweep.*
+Data/
+!Data/Config/
+!Data/Indices/
 
 # Figures
 *.pdf
@@ -140,6 +141,6 @@ Data/Tml_sweep.*
 
 # Models
 *.pt
-!/Models/SoTA_model/*.pt
+# !/Models/SoTA_model/*.pt
 
 .vscode/launch.json
