@@ -95,7 +95,7 @@ class Model():
 
         # Generate frequency label for plotting
         train_idx_example = train_idx[0]
-        self.F = torch.Tensor(df.loc[train_idx_example]['F']).reshape(-1, 1)
+        self.F = torch.Tensor(np.arange(out_features) * 200e6).reshape(-1, 1)
     
         # Preprocess the data
         dp = data_processor()

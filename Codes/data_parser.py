@@ -10,14 +10,13 @@ import numpy as np
 
 # from tqdm import tqdm
 
-### PRASE THE DATA ###
-
+### parse the sweeeped data ###
 def data_parse(case, model, port, optimetric, data_dir='./'):
     
     current_dir = os.getcwd()
     # Get the absolute path of the upper directory
     home_dir = os.path.abspath(os.path.join(current_dir, '..'))
-    data_dir = os.path.join(data_dir, 'Data', 'Tml_sweep', 'Tml_sweep', case, model, 'Optimetrics', optimetric)
+    data_dir = os.path.join(home_dir, 'Data', 'Tml_sweep', 'Tml_sweep', case, model, 'Optimetrics', optimetric)
 
     data_path = os.path.join(home_dir, data_dir)
 
@@ -94,6 +93,126 @@ def data_parse(case, model, port, optimetric, data_dir='./'):
                     node_ID = node_ID_match.group(1)
         
     return df
+
+### parse the mixed line batch data ###
+def data_parse_v2(case, port,):
+    
+    current_dir = os.getcwd()
+    home_dir = os.path.abspath(os.path.join(current_dir, '..'))
+    data_dir = os.path.join(home_dir, 'Data')
+    case_dir = os.path.join(data_dir, case)
+    excel_dir = os.path.join(data_dir, '%s.xlsx' % case)
+    result_dir = os.path.join(data_dir, '%s' % case)
+    
+    para_df = pd.read_excel(excel_dir, sheet_name='Mixed_N_Line_Stripline', skiprows=23)
+    
+    # Set new df
+    new_para_df = para_df.T.loc[para_df.T.index[1:]].copy()
+    new_para_df.columns = para_df.T.loc['batch list'].to_numpy()
+    new_para_df = new_para_df.set_index('save dir file name')
+    new_para_df.index.name = None
+    
+    
+    # Get the absolute path of the upper directory
+
+    # rlgc_df_list = []
+    snp_df_list = []
+    keys = []
+    snp_headers = []
+    
+    for i in range(port):
+        for j in range(port):
+            for s in 'SR', 'SI':
+                snp_headers.append('%s(%d,%d)' % (s, i+1, j+1))
+
+    for dirs in os.listdir(result_dir):
+                
+        # skip with
+        if os.path.isdir(os.path.join(result_dir, dirs, 'RLGC')):
+            
+            # read rlgc
+            # rlgc = 'TransmissionLine.rlgc'
+            
+            # read snp
+            snp = 'TransmissionLine.s%dp' % port
+            
+            if os.path.exists(os.path.join(result_dir, dirs, 'RLGC', snp)):
+                keys.append(dirs)
+                # rlgc_df_list.append(pd.read_csv(os.path.join(data_path, dirs, rlgc), skiprows=2, delim_whitespace=True))
+
+                snp_df = pd.read_csv(os.path.join(result_dir, dirs, 'RLGC', snp), skiprows=port+3, delim_whitespace=True, header=None).loc[:, 1:]
+                snp_df.columns = snp_headers
+                
+                for p in new_para_df.columns:
+                    if p == 'W':
+                        snp_df.loc[:, p] = float(new_para_df.loc[dirs, p].split(',')[0])
+                    else:
+                        snp_df.loc[:, p] = float(new_para_df.loc[dirs, p])
+                
+                snp_df_list.append(snp_df)
+                
+    # df = pd.concat([pd.concat(rlgc_df_list, keys=keys), pd.concat(snp_df_list, keys=keys)], axis=1)
+    df = pd.concat(snp_df_list, keys=keys)
+
+    return df
+"""
+Consider a dataset of the following structures:
+
+-- dataset
+    -- subset1
+        -- line1
+            --
+        -- line2
+            --
+        ...
+        script.xlsx
+    -- subset2
+        ...
+
+-> save to an entire csv
+"""
+
+
+def data_parse_v3(dataset, port,):
+
+    current_dir = os.getcwd()
+    home_dir = os.path.abspath(os.path.join(current_dir, '..'))
+    data_dir = os.path.join(home_dir, 'Data')
+    dataset_dir = os.path.join(data_dir, dataset)
+
+    for subset in os.listdir(dataset_dir):
+        
+
+
+    excel_dir = os.path.join(data_dir, '%s.xlsx' % case)
+    result_dir = os.path.join(data_dir, '%s' % case)
+    
+    para_df = pd.read_excel(excel_dir, sheet_name='Mixed_N_Line_Stripline', skiprows=23)
+
+
+def read_input_feature_xlsx(case, port):
+    
+    current_dir = os.getcwd()
+    home_dir = os.path.abspath(os.path.join(current_dir, '..'))
+    data_dir = os.path.join(home_dir, 'Data')
+    case_dir = os.path.join(data_dir, case)
+    excel_dir = os.path.join(data_dir, '%s.xlsx' % case)
+    result_dir = os.path.join(data_dir, '%s' % case)
+    
+    para_df = pd.read_excel(excel_dir, sheet_name='Mixed_N_Line_Stripline', skiprows=23)
+    
+    # Set new df
+    new_para_df = para_df.T.loc[para_df.T.index[1:]].copy()
+    new_para_df.columns = para_df.T.loc['batch list'].to_numpy()
+    new_para_df = new_para_df.set_index('save dir file name')
+    new_para_df.index.name = None
+    
+    def split_func(x):
+        return float(x.split(',')[0])
+    new_para_df['W'] = new_para_df['W'].apply(split_func)
+    
+    return new_para_df
+
 
 def calculate_amp_phase(df, unwrap=True):
     # Calculate amplitude and phase
